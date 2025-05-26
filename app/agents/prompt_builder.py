@@ -11,7 +11,7 @@ def generate_data_alerts(df: pd.DataFrame, profile: Dict) -> str:
         n_nulos = profile['resumo'].get(col, {}).get("nulos", 0)
         percent_nulos = (n_nulos / total_rows) * 100 if total_rows else 0
 
-        if percent_nulos > 5:
+        if percent_nulos > 20:
             alerts.append(f"- A coluna `{col}` possui {percent_nulos:.1f}% de valores ausentes.")
 
         if col_type == "numérica":
@@ -28,6 +28,32 @@ def generate_data_alerts(df: pd.DataFrame, profile: Dict) -> str:
         return "⚠️ ALERTAS DE QUALIDADE DOS DADOS:\n" + "\n".join(alerts) + "\n"
     else:
         return ""
+
+def classify_data_quality(profile: Dict, df: pd.DataFrame) -> dict:
+    total_rows = len(df)
+    ruim = 0
+    media = 0
+    problemas = []
+
+    for col, stats in profile['resumo'].items():
+        nulos = stats.get("nulos", 0)
+        percent_nulos = (nulos / total_rows) * 100 if total_rows else 0
+
+        if percent_nulos > 50:
+            ruim += 1
+            problemas.append(f"Coluna `{col}` possui mais de 50% de nulos")
+        elif percent_nulos > 20:
+            media += 1
+            problemas.append(f"Coluna `{col}` possui mais de 20% de nulos")
+
+    if ruim >= 2:
+        nivel = "Ruim"
+    elif media >= 2 or ruim == 1:
+        nivel = "Média"
+    else:
+        nivel = "Boa"
+
+    return {"nivel": nivel, "problemas": problemas}
 
 def build_prompt(df: pd.DataFrame,
                  profile: Dict,
