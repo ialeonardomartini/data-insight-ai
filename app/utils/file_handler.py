@@ -1,1 +1,0 @@
-# Futuro: validação de arquivos, encoding, etc.

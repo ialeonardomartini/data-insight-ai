@@ -1,0 +1,25 @@
+[project]
+name = "data-insight-ai"
+version = "0.1.0"
+description = "Análise automatizada de dados com múltiplos agentes usando CrewAI"
+authors = ["Seu Nome <seu@email.com>"]
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "crewai",
+    "crewai-tools",
+    "openai>=1.0",
+    "python-dotenv",
+    "pandas",
+    "fpdf",
+    "plotly",
+    "streamlit",
+    "pyyaml"
+]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

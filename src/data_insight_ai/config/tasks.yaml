@@ -1,0 +1,49 @@
+classify_data_quality_task:
+  description: >
+    Com base no profile do DataFrame, classifique a qualidade geral dos dados como:
+    - Boa
+    - Média
+    - Ruim
+    Liste os principais problemas detectados.
+  expected_output: >
+    {
+      "nivel": "Média",
+      "problemas": ["Coluna `email` possui mais de 50% de nulos"]
+    }
+
+generate_insights_task:
+  description: >
+    Com base em um prompt descritivo que resume todo o conjunto de dados e o objetivo da análise,
+    gere um relatório com insights estratégicos, padrões detectados e recomendações de negócio.
+  expected_output: >
+    Um relatório em texto (markdown ou plain text) com seções bem definidas.
+
+describe_charts_task:
+  description: >
+    Você deve analisar gráficos gerados automaticamente a partir de um conjunto de dados.
+
+    Para cada gráfico, você receberá:
+    - O título do gráfico
+    - O nome das colunas X e Y
+    - Uma amostra de dados com até 10 linhas
+
+    Com base nisso, escreva uma explicação clara, objetiva e útil em até 3 frases.
+    Destaque padrões, tendências, variações ou qualquer insight relevante.
+    Evite repetir o título ou descrever o tipo de gráfico.
+
+    Título do gráfico: {titulo}
+    Eixo X: {x_col}
+    Eixo Y: {y_col}
+    Dados (CSV):
+    {sample_data}
+
+  expected_output: >
+    Uma descrição simples e conclusiva sobre o gráfico fornecido. Máximo de 3 frases.
+
+
+qa_on_dataframe_task:
+  description: >
+    Responda a uma pergunta feita pelo usuário com base no conteúdo de um DataFrame.
+    A resposta deve ser baseada apenas nas colunas, amostras e estatísticas fornecidas.
+  expected_output: >
+    Texto com a resposta objetiva e direta à pergunta, baseado apenas nos dados.
