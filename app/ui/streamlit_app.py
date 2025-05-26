@@ -29,12 +29,12 @@ if uploaded_file and "df" not in st.session_state:
     colunas_originais = df_original.shape[1]
 
     if linhas_originais > 1000:
-        df_original = df_original.sample(n=500, random_state=42)
-    if colunas_originais > 30:
-        df_original = df_original.iloc[:, :30]
+        df_original = df_original.sample(n=1000, random_state=42)
+    if colunas_originais > 15:
+        df_original = df_original.iloc[:, :15]
 
     st.warning(f"⚠️ O arquivo enviado possui {linhas_originais} linhas e {colunas_originais} colunas.\n"
-               f"Aplicamos uma amostragem de até 500 linhas e limitamos para as 30 primeiras colunas para melhor performance.")
+               f"Aplicamos uma amostragem de até 1000 linhas e limitamos para as 15 primeiras colunas para melhor performance.")
 
     colunas_disponiveis = list(df_original.columns)
     colunas_selecionadas = st.multiselect("Selecione as colunas que deseja manter:", colunas_disponiveis, default=colunas_disponiveis)
