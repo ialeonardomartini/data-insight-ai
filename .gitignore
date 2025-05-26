@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Ambiente virtual
+venv/
+
+# Arquivo de variáveis de ambiente
+.env
+.env.*
+
+# Streamlit e logs
+.streamlit/
+
+# IDEs
+.vscode/
+.idea/
+
+# Testes e cache
+.pytest_cache/
+.mypy_cache/
+
+# macOS
+.DS_Store
+.env
