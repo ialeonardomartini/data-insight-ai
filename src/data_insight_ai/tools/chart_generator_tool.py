@@ -4,38 +4,39 @@ import plotly.express as px
 from plotly.graph_objects import Figure
 from io import StringIO
 
-# ✅ Importa o decorador @tool (ou define fallback se necessário)
-def tool(description): return lambda func: func  # fallback fixo
-
-@tool("Gera automaticamente gráficos a partir de uma string CSV. Retorna lista de tuplas (plotly.Figure, {'descricao': texto}).")
 def gerar_graficos_automaticamente(csv: str) -> List[Tuple[Figure, dict]]:
     df = pd.read_csv(StringIO(csv))
+
+    print(f"\n🔍 Dados recebidos: {df.shape[0]} linhas, {df.shape[1]} colunas")
+    if "produto" in df.columns:
+        print(f"📦 Produtos únicos detectados: {df['produto'].nunique()}")
+
     graficos = []
 
-    # Detecta tipos de coluna
     col_types = {}
     for col in df.columns:
         if pd.api.types.is_numeric_dtype(df[col]):
             col_types[col] = "numerica"
         elif pd.api.types.is_datetime64_any_dtype(df[col]):
             col_types[col] = "data"
-        elif pd.api.types.is_string_dtype(df[col]) and df[col].nunique() < 30:
+        elif pd.api.types.is_string_dtype(df[col]):
             col_types[col] = "categorica"
 
-    # Gera gráficos úteis com base nas colunas
-    for col1 in df.columns:
-        tipo1 = col_types.get(col1)
-        if tipo1 == "categorica":
-            for col2 in df.columns:
-                if col_types.get(col2) == "numerica":
-                    data = df.groupby(col1)[col2].mean().reset_index()
-                    fig = px.bar(data, x=col1, y=col2, title=f"Média de {col2} por {col1}")
-                    graficos.append((fig, {"descricao": f"Média de {col2} por categoria {col1}"}))
-        elif tipo1 == "data":
-            for col2 in df.columns:
-                if col_types.get(col2) == "numerica":
-                    df_sorted = df.sort_values(by=col1)
-                    fig = px.line(df_sorted, x=col1, y=col2, title=f"{col2} ao longo do tempo ({col1})")
-                    graficos.append((fig, {"descricao": f"Evolução de {col2} ao longo do tempo por {col1}"}))
+    # Força visualização de todos os produtos
+    if "produto" in df.columns and "valor_total" in df.columns:
+        todos_produtos = sorted(df["produto"].dropna().unique())
+        agrupado = df.groupby("produto")["valor_total"].mean().reindex(todos_produtos).reset_index()
+        fig = px.bar(agrupado, x="produto", y="valor_total", title="Média de valor_total por produto")
+        graficos.append((fig, {
+            "descricao": "Comparativo da média de valor_total por produto, incluindo todos os produtos da base, mesmo com poucas vendas."
+        }))
+
+    # Exemplo extra: categoria x receita total
+    if "categoria" in df.columns and "valor_total" in df.columns:
+        agrupado = df.groupby("categoria")["valor_total"].sum().reset_index()
+        fig = px.pie(agrupado, names="categoria", values="valor_total", title="Participação de receita por categoria")
+        graficos.append((fig, {
+            "descricao": "Distribuição da receita total por categoria de produto."
+        }))
 
     return graficos

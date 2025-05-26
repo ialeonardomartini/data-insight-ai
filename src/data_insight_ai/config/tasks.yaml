@@ -1,49 +1,64 @@
 classify_data_quality_task:
   description: >
-    Com base no profile do DataFrame, classifique a qualidade geral dos dados como:
-    - Boa
-    - Média
-    - Ruim
-    Liste os principais problemas detectados.
+    Faça uma auditoria completa na base de dados transacionais do e-commerce apresentada abaixo:
+
+    {dataframe}
+
+    Verifique colunas com valores nulos, inconsistentes ou com padrões inesperados,
+    especialmente em campos como ID do cliente, valor do pedido, data da transação, categoria de produto
+    ou status de pagamento.
+
   expected_output: >
-    {
-      "nivel": "Média",
-      "problemas": ["Coluna `email` possui mais de 50% de nulos"]
-    }
+    Um relatório textual com os principais problemas de qualidade encontrados, como colunas vazias,
+    formatos inconsistentes ou dados fora do esperado em um contexto de e-commerce.
 
 generate_insights_task:
   description: >
-    Com base em um prompt descritivo que resume todo o conjunto de dados e o objetivo da análise,
-    gere um relatório com insights estratégicos, padrões detectados e recomendações de negócio.
-  expected_output: >
-    Um relatório em texto (markdown ou plain text) com seções bem definidas.
+    Gere um relatório de insights estratégicos com base em todos os dados transacionais do e-commerce apresentados a seguir:
 
-describe_charts_task:
-  description: >
-    Você deve analisar gráficos gerados automaticamente a partir de um conjunto de dados.
+    Considere aspectos como:
+    - Produtos mais vendidos e menos vendidos
+    - Ticket médio por cliente ou por pedido
+    - Categorias com maior ou menor receita
+    - Clientes de alto valor ou churn
+    - Canais de aquisição mais eficazes
+    - Frequência e recorrência de compra
+    - Descontos aplicados e sua efetividade
 
-    Para cada gráfico, você receberá:
-    - O título do gráfico
-    - O nome das colunas X e Y
-    - Uma amostra de dados com até 10 linhas
+    Objetivo informado pelo usuário:
+    {objetivo}
 
-    Com base nisso, escreva uma explicação clara, objetiva e útil em até 3 frases.
-    Destaque padrões, tendências, variações ou qualquer insight relevante.
-    Evite repetir o título ou descrever o tipo de gráfico.
-
-    Título do gráfico: {titulo}
-    Eixo X: {x_col}
-    Eixo Y: {y_col}
-    Dados (CSV):
-    {sample_data}
+    Base de dados:
+    {dataframe}
 
   expected_output: >
-    Uma descrição simples e conclusiva sobre o gráfico fornecido. Máximo de 3 frases.
-
+    De 3 a 5 insights claros, relevantes e aplicáveis ao negócio,
+    com sugestões para aumentar vendas, otimizar campanhas ou melhorar a experiência do cliente.
 
 qa_on_dataframe_task:
   description: >
-    Responda a uma pergunta feita pelo usuário com base no conteúdo de um DataFrame.
-    A resposta deve ser baseada apenas nas colunas, amostras e estatísticas fornecidas.
+    O usuário fez a seguinte pergunta com base na base de dados completa do e-commerce:
+
+    Pergunta: {pergunta}
+
+    Base de dados fornecida:
+    {dataframe}
+
   expected_output: >
-    Texto com a resposta objetiva e direta à pergunta, baseado apenas nos dados.
+    Uma resposta direta, objetiva e embasada apenas nos dados fornecidos.
+    Sempre que possível, cite números, totais, médias ou percentuais com clareza.
+
+describe_charts_task:
+  description: >
+    O gráfico a seguir representa dados de vendas, produtos ou clientes no contexto de um e-commerce.
+
+    Título: {titulo}
+    Eixo X: {x_col}
+    Eixo Y: {y_col}
+
+    Segmento dos dados utilizados para gerar o gráfico:
+    {amostra}
+
+  expected_output: >
+    Uma descrição clara em até 3 frases, destacando padrões, picos ou correlações observadas.
+    Se houver um insight comercial evidente (ex: vendas maiores em datas específicas ou categorias dominantes), mencione.

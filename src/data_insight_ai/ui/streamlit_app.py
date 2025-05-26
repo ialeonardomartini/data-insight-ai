@@ -3,119 +3,92 @@ import pandas as pd
 from data_insight_ai.main import (
     avaliar_qualidade_dados,
     gerar_insights_analise,
-    gerar_graficos,
     responder_pergunta,
-    gerar_pdf_completo  # ✅ nova função
+    gerar_graficos_interativos,
+    calcular_kpis_negocio
 )
 
-st.set_page_config(page_title="DataInsightAI", layout="wide")
-st.title("📊 DataInsightAI — Geração automática de insights e dashboards")
+st.set_page_config(page_title="Data Insight AI", layout="wide")
+st.title("📊 Data Insight AI - E-commerce")
 
-# Inicialização do estado
-for chave in ["df", "insights", "graficos", "qualidade_texto", "chat_history"]:
-    if chave not in st.session_state:
-        st.session_state[chave] = None if chave != "chat_history" else []
+if "df" not in st.session_state:
+    st.session_state.df = None
 
-# =======================
-# SEÇÃO 1 — Upload e Tabela
-# =======================
-uploaded_file = st.file_uploader("📤 Envie seu arquivo CSV", type="csv")
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    if df.shape[0] > 1000:
-        df = df.sample(n=1000, random_state=42)
-        st.warning("⚠️ Amostragem aplicada: até 1000 linhas.")
-    if df.shape[1] > 15:
-        df = df.iloc[:, :15]
-        st.warning("⚠️ Limitado às 15 primeiras colunas.")
+# 📁 Seção 1: Upload do arquivo
+st.header("1. Upload de Arquivo CSV")
+file = st.file_uploader("Envie um arquivo CSV com dados do e-commerce", type=["csv"])
+
+if file:
+    df = pd.read_csv(file)
     st.session_state.df = df
+    st.success(f"✅ {df.shape[0]} linhas carregadas com sucesso!")
+    st.dataframe(df.head(10))
 
+# 📉 Seção 2: Avaliação da Qualidade
 if st.session_state.df is not None:
-    st.subheader("📄 Visualização da Tabela")
-    st.dataframe(st.session_state.df.head())
+    st.header("2. Avaliação de Qualidade dos Dados")
+    if "qualidade" not in st.session_state:
+        with st.spinner("Analisando qualidade dos dados..."):
+            st.session_state.qualidade = avaliar_qualidade_dados(st.session_state.df)
+    st.markdown(st.session_state.qualidade)
 
-# =======================
-# SEÇÃO 2 — Avaliação de Qualidade
-# =======================
-    st.subheader("🧪 Avaliação da Qualidade dos Dados")
-    if st.button("Avaliar Qualidade"):
-        with st.spinner("Analisando..."):
-            resultado = avaliar_qualidade_dados(st.session_state.df)
-            st.session_state.qualidade_texto = resultado
-            st.markdown(resultado)
-    elif st.session_state.qualidade_texto:
-        st.markdown(st.session_state.qualidade_texto)
+# 📈 Seção 2.5: KPIs estratégicos
+if st.session_state.df is not None:
+    st.header("📊 KPIs Estratégicos")
+    if "kpis" not in st.session_state:
+        with st.spinner("Calculando KPIs do e-commerce..."):
+            st.session_state.kpis = calcular_kpis_negocio(st.session_state.df)
 
-# =======================
-# SEÇÃO 3 — Geração de Insights
-# =======================
-    st.subheader("🧠 Geração de Insights")
-    objetivo = st.text_input("Objetivo da análise (opcional):")
-    if st.button("Gerar Insights"):
+    kpis = st.session_state.kpis
+    st.subheader("Resumo de Indicadores:")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("🎯 Ticket Médio por Pedido", f"R$ {kpis['ticket_medio_pedido']}")
+    col2.metric("🛍️ Ticket Médio por Cliente", f"R$ {kpis['ticket_medio_cliente']}")
+    col3.metric("🔁 Média de Pedidos por Cliente", f"{kpis['media_pedidos_por_cliente']}")
+
+    st.markdown("### 💰 Faturamento por Categoria")
+    st.bar_chart(pd.Series(kpis["faturamento_categoria"]))
+
+    st.markdown("### 🥇 Top 5 Clientes (Valor Total)")
+    st.table(pd.DataFrame.from_dict(kpis["top_clientes"], orient="index", columns=["Valor Total"]))
+
+# 📋 Seção 3: Geração de Insights
+if st.session_state.df is not None:
+    st.header("3. Insights de Negócio")
+    objetivo = st.text_input("Objetivo da análise", "Identificar padrões de compra e comportamento de clientes")
+    if "insights" not in st.session_state:
         with st.spinner("Gerando insights..."):
-            insights = gerar_insights_analise(st.session_state.df, objetivo)
-            st.session_state.insights = insights
-            st.markdown(insights)
-    elif st.session_state.insights:
-        st.markdown("### 📄 Últimos Insights")
-        st.markdown(st.session_state.insights)
+            st.session_state.insights = gerar_insights_analise(st.session_state.df, objetivo)
+    st.markdown(st.session_state.insights)
 
-# =======================
-# SEÇÃO 4 — Geração de Gráficos
-# =======================
-    st.subheader("📊 Visualizações com Análise")
-    if st.button("Gerar Gráficos"):
-        with st.spinner("Gerando gráficos..."):
-            graficos = gerar_graficos(st.session_state.df)
-            st.session_state.graficos = graficos
+# 📊 Seção 4: Visualização de Gráficos Interativos
+if st.session_state.df is not None:
+    st.header("4. Análise Visual Interativa")
 
-    if st.session_state.graficos:
-        for g in st.session_state.graficos:
-            st.plotly_chart(g["fig"], use_container_width=True)
-            st.markdown(f"_💬 {g['descricao']}_")
+    kpi_opcao = st.selectbox("Escolha o KPI para análise:", ["valor_total", "quantidade"])
+    with st.spinner("Gerando gráficos..."):
+        st.session_state.graficos = gerar_graficos_interativos(st.session_state.df, kpi=kpi_opcao)
 
-# =======================
-# SEÇÃO 5 — Q&A com IA
-# =======================
-    st.subheader("💬 Perguntas sobre os Dados")
-    with st.form("chat_form"):
-        pergunta = st.text_input("Digite sua pergunta")
-        enviar = st.form_submit_button("Perguntar")
+    graficos = st.session_state.graficos
+    st.subheader("📈 Evolução Temporal")
+    st.plotly_chart(graficos["linha"], use_container_width=True)
 
-    if enviar and pergunta:
-        with st.spinner("Respondendo..."):
+    st.subheader("📊 Comparação por Produto")
+    st.plotly_chart(graficos["barra"], use_container_width=True)
+
+    st.subheader("🥧 Distribuição por Categoria e Canal")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.plotly_chart(graficos["pizza_categoria"], use_container_width=True)
+    with col2:
+        st.plotly_chart(graficos["pizza_canal"], use_container_width=True)
+
+# 💬 Seção 5: Pergunte algo sobre os dados
+if st.session_state.df is not None:
+    st.header("5. Pergunte algo sobre os dados")
+    pergunta = st.text_input("Digite sua pergunta:", "")
+    if pergunta:
+        with st.spinner("Analisando pergunta..."):
             resposta = responder_pergunta(st.session_state.df, pergunta)
-            st.session_state.chat_history.append((pergunta, resposta))
-
-    for pergunta, resposta in reversed(st.session_state.chat_history):
-        st.markdown(f"**👤 Pergunta:** {pergunta}")
-        st.markdown(f"**🤖 Resposta:** {resposta}")
-
-
-# =======================
-# SEÇÃO 6 — Download do Relatório em PDF
-# =======================
-    st.subheader("📥 Baixar Relatório Completo (PDF)")
-    if (
-        st.session_state.insights
-        and st.session_state.qualidade_texto
-        and st.session_state.graficos
-        and st.session_state.chat_history
-    ):
-        if st.button("📄 Gerar e Baixar PDF Completo"):
-            with st.spinner("Gerando relatório completo..."):
-                pdf_bytes = gerar_pdf_completo(
-                    st.session_state.df,
-                    st.session_state.qualidade_texto,
-                    st.session_state.insights,
-                    st.session_state.graficos,
-                    st.session_state.chat_history
-                )
-                st.download_button(
-                    label="📥 Clique aqui para baixar",
-                    data=pdf_bytes,
-                    file_name="relatorio_data_insight_ai.pdf",
-                    mime="application/pdf"
-                )
-    else:
-        st.info("⚠️ Para gerar o PDF, complete as seções anteriores.")
+            st.session_state.resposta_qa = resposta
+        st.markdown(f"**💬 Resposta:** {resposta}")
