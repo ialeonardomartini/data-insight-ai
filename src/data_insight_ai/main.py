@@ -1,16 +1,17 @@
 import pandas as pd
+import plotly.express as px
+import json
 from crewai import Crew, Task, Process
 from data_insight_ai.agent_loader import (
     get_quality_analyst_agent,
     get_insight_agent,
     get_qa_agent,
-    get_chart_describer_agent
+    get_chart_describer_agent,
+    get_chart_advisor_agent
 )
+from data_insight_ai.task_loader import get_task
 
-from data_insight_ai.tools.chart_generator_tool import gerar_graficos_automaticamente
-import plotly.express as px
-
-
+# Função auxiliar para conversão de DataFrame em string
 def dataframe_para_texto(df: pd.DataFrame, linhas: int = None) -> str:
     if linhas is None:
         return df.to_csv(index=False)
@@ -25,125 +26,98 @@ def get_output(resultado):
 def avaliar_qualidade_dados(df: pd.DataFrame) -> str:
     df_str = dataframe_para_texto(df)
     agente = get_quality_analyst_agent()
-    tarefa = Task(
-        description="Analise a qualidade da base de dados completa a seguir:\n\n{dataframe}",
-        expected_output="Resumo da qualidade dos dados, incluindo possíveis falhas e sugestões de melhoria.",
-        agent=agente
-    )
+    tarefa = get_task("avaliar_qualidade_dados", agent=agente)
     crew = Crew(agents=[agente], tasks=[tarefa], process=Process.sequential)
-    return get_output(crew.kickoff(inputs={"dataframe": df_str}))
+    resultado = crew.kickoff(inputs={"dataframe": df_str})
+    return get_output(resultado)
 
 
-# 2. Insights de negócio
+# 2. Geração de insights
 def gerar_insights_analise(df: pd.DataFrame, objetivo: str = "") -> str:
     df_str = dataframe_para_texto(df)
     agente = get_insight_agent()
-    tarefa = Task(
-        description=(
-            "Com base na base de dados completa abaixo, gere um relatório de insights úteis para o negócio.\n\n"
-            "Objetivo do usuário: {objetivo}\n\n"
-            "Base de dados:\n{dataframe}"
-        ),
-        expected_output="Relatório com padrões, anomalias, oportunidades e recomendações de negócio.",
-        agent=agente
-    )
+    tarefa = get_task("gerar_insights_negocio", agent=agente)
     inputs = {
         "dataframe": df_str,
         "objetivo": objetivo or "Analisar dados de vendas e comportamento dos clientes em e-commerce."
     }
     crew = Crew(agents=[agente], tasks=[tarefa], process=Process.sequential)
-    return get_output(crew.kickoff(inputs=inputs))
+    resultado = crew.kickoff(inputs=inputs)
+    return get_output(resultado)
 
 
 # 3. Perguntas e respostas
 def responder_pergunta(df: pd.DataFrame, pergunta: str) -> str:
     df_str = dataframe_para_texto(df)
     agente = get_qa_agent()
-    tarefa = Task(
-        description=(
-            "Com base na seguinte base de dados completa:\n{dataframe}\n\n"
-            "Responda à pergunta do usuário com base apenas nessas informações:\n{pergunta}"
-        ),
-        expected_output="Resposta objetiva e clara, com base apenas nos dados fornecidos.",
-        agent=agente
-    )
+    tarefa = get_task("responder_pergunta_csv", agent=agente)
     crew = Crew(agents=[agente], tasks=[tarefa], process=Process.sequential)
-    return get_output(crew.kickoff(inputs={"dataframe": df_str, "pergunta": pergunta}))
+    resultado = crew.kickoff(inputs={"csv_text": df_str, "pergunta": pergunta})
+    return get_output(resultado)
 
 
-# 4. Geração de gráficos interativos
-def gerar_graficos_interativos(df: pd.DataFrame, kpi: str = "valor_total") -> dict:
-    df_aprovado = df[df["status_pagamento"] == "Aprovado"]
-
-    linha = px.line(
-        df_aprovado.groupby("data_compra")[kpi].sum().reset_index(),
-        x="data_compra", y=kpi,
-        title=f"Evolução diária de {kpi.replace('_', ' ').title()}",
-    )
-
-    barra = px.bar(
-        df_aprovado.groupby("produto")[kpi].sum().nlargest(10).reset_index(),
-        x="produto", y=kpi,
-        title=f"Top 10 Produtos por {kpi.replace('_', ' ').title()}",
-    )
-
-    pizza_categoria = px.pie(
-        df_aprovado, names="categoria", values=kpi,
-        title=f"Distribuição por Categoria ({kpi.replace('_', ' ').title()})"
-    )
-
-    pizza_canal = px.pie(
-        df_aprovado, names="canal_origem", values=kpi,
-        title=f"Distribuição por Canal de Origem ({kpi.replace('_', ' ').title()})"
-    )
-
-    return {
-        "linha": linha,
-        "barra": barra,
-        "pizza_categoria": pizza_categoria,
-        "pizza_canal": pizza_canal,
-    }
+# 4. Colunas disponíveis no CSV
+def identificar_colunas_csv(df: pd.DataFrame) -> list[str]:
+    return list(df.columns)
 
 
-# 5. Descrição dos gráficos via IA
-def descrever_grafico_com_agente(titulo: str, x_col: str, y_col: str, df: pd.DataFrame) -> str:
-    agente = get_chart_describer_agent()
+# 5. Função para recomendar os melhores gráficos via agente
+def sugerir_graficos_via_agente(df: pd.DataFrame) -> list[dict]:
+    df_str = df.head(100).to_csv(index=False)
+    agente = get_chart_advisor_agent()
+    tarefa = get_task("sugerir_graficos_csv", agent=agente)
+
+    crew = Crew(agents=[agente], tasks=[tarefa], process=Process.sequential)
+    resultado = crew.kickoff(inputs={"csv_text": df_str})
+
+    # ✅ Certifique-se de extrair o texto do CrewOutput
+    raw = get_output(resultado)
+
+    if not isinstance(raw, str):
+        print("⚠️ O resultado não é uma string, convertendo...")
+        raw = str(raw)
+
     try:
-        sample = df[[x_col, y_col]].head(10).to_csv(index=False)
-    except Exception:
-        sample = ""
+        sugestoes = json.loads(raw)
+    except json.JSONDecodeError:
+        print("❌ Erro ao decodificar JSON do agente.")
+        return []
 
-    task = Task(
-        description=(
-            f"Analise o seguinte gráfico gerado a partir da base de dados completa:\n"
-            f"Título: {titulo}\n"
-            f"Eixo X: {x_col} | Eixo Y: {y_col}\n\n"
-            f"Amostra dos dados usados para o gráfico:\n{sample}\n\n"
-            f"Descreva em no máximo 3 frases o que esse gráfico mostra e destaque qualquer padrão ou insight relevante."
-        ),
-        expected_output="Descrição objetiva e clara sobre o que o gráfico representa.",
-        agent=agente
-    )
+    if not isinstance(sugestoes, list):
+        print("⚠️ O agente retornou algo que não é uma lista.")
+        return []
+
+    # ✅ Valida as colunas sugeridas
+    colunas_validas = set(df.columns)
+    sugestoes_validas = []
+    for s in sugestoes:
+        if (
+            isinstance(s, dict)
+            and s.get("eixo_x") in colunas_validas
+            and s.get("eixo_y") in colunas_validas
+            and s.get("tipo") in ["Barra", "Pizza", "Linha"]
+        ):
+            sugestoes_validas.append(s)
+
+    if not sugestoes_validas:
+        print("⚠️ Nenhuma sugestão válida foi retornada.")
+    else:
+        print(f"✅ {len(sugestoes_validas)} sugestões válidas geradas.")
+
+    return sugestoes_validas
+
+def descrever_grafico_via_agente(titulo: str, eixo_x: str, eixo_y: str, df_amostra: pd.DataFrame) -> str:
+    agente = get_chart_describer_agent()
+    task = get_task("descrever_grafico", agent=agente)
+
+    dados_amostra = df_amostra[[eixo_x, eixo_y]].head(500).to_csv(index=False)
 
     crew = Crew(agents=[agente], tasks=[task], process=Process.sequential)
-    return get_output(crew.kickoff())
+    resultado = crew.kickoff(inputs={
+        "titulo": titulo,
+        "eixo_x": eixo_x,
+        "eixo_y": eixo_y,
+        "dados_amostra": dados_amostra  # 👈 Aqui o nome precisa bater com o tasks.yaml
+    })
 
-
-# 7. KPIs de negócio
-def calcular_kpis_negocio(df: pd.DataFrame) -> dict:
-    df_aprovado = df[df["status_pagamento"] == "Aprovado"]
-
-    ticket_medio_pedido = round(df_aprovado["valor_total"].mean(), 2)
-    ticket_medio_cliente = round(df_aprovado.groupby("cliente_id")["valor_total"].sum().mean(), 2)
-    media_pedidos_por_cliente = round(df_aprovado.groupby("cliente_id")["pedido_id"].nunique().mean(), 2)
-
-    faturamento_categoria = df_aprovado.groupby("categoria")["valor_total"].sum().sort_values(ascending=False)
-    top_clientes = df_aprovado.groupby("cliente_id")["valor_total"].sum().nlargest(5).to_dict()
-
-    return {
-        "ticket_medio_pedido": ticket_medio_pedido,
-        "ticket_medio_cliente": ticket_medio_cliente,
-        "media_pedidos_por_cliente": media_pedidos_por_cliente,
-        "faturamento_categoria": faturamento_categoria,
-        "top_clientes": top_clientes
-    }
+    return get_output(resultado)

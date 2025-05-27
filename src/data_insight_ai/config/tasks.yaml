@@ -62,3 +62,181 @@ describe_charts_task:
   expected_output: >
     Uma descrição clara em até 3 frases, destacando padrões, picos ou correlações observadas.
     Se houver um insight comercial evidente (ex: vendas maiores em datas específicas ou categorias dominantes), mencione.
+
+identificar_schema_colunas:
+  description: >
+    Você é um analista de dados. Abaixo está uma amostra de um dataset em formato CSV.
+
+    Sua tarefa é identificar o schema, ou seja, quais colunas representam:
+    - ID do cliente
+    - ID do pedido
+    - valor da compra
+    - data da compra
+    - status do pagamento
+    - canal de origem
+    - nome do produto
+    - categoria do produto
+
+    Retorne um JSON com as seguintes chaves:
+    - coluna_cliente
+    - coluna_pedido
+    - coluna_valor
+    - coluna_data
+    - coluna_status
+    - coluna_canal
+    - coluna_produto
+    - coluna_categoria
+
+    Exemplo de saída:
+    {
+      "coluna_cliente": "cliente_id",
+      "coluna_pedido": "pedido_id",
+      "coluna_valor": "valor_total",
+      ...
+    }
+
+    CSV de exemplo:
+    {csv_text}
+  expected_output: >
+    JSON contendo o mapeamento do schema conforme solicitado.
+
+identificar_colunas_csv:
+  description: >
+    Você receberá um CSV. Seu trabalho é identificar os nomes das colunas presentes no cabeçalho desse arquivo.
+    Retorne uma lista JSON contendo apenas os nomes das colunas como strings, por exemplo:
+    ["cliente_id", "produto", "valor_total"]
+    Não escreva mais nada além da lista JSON.
+    
+    CSV:
+    {csv}
+  expected_output: >
+    Uma lista JSON com os nomes das colunas, como: ["coluna1", "coluna2", "coluna3"]
+
+
+sugerir_melhores_graficos:
+  description: >
+    Analise a estrutura do dataframe abaixo (extraído de um arquivo CSV) e sugira os 5 melhores gráficos para gerar a partir desses dados.
+
+    Para cada gráfico, indique:
+    - Coluna para eixo X (categórica)
+    - Coluna para eixo Y (numérica, métrica)
+    - Tipo de gráfico mais adequado (entre: barra, linha ou pizza)
+
+    O dataframe será fornecido como texto (CSV sem cabeçalho repetido), use as primeiras 100 linhas como amostra.
+    Evite colunas como "id", "pedido_id", "cliente_id", ou outras que não são relevantes para visualizações.
+
+    Retorne a sugestão como uma lista JSON no seguinte formato:
+    ```json
+    [
+      {"x": "categoria", "y": "valor_total", "tipo": "pizza"},
+      {"x": "produto", "y": "quantidade", "tipo": "barra"},
+      ...
+    ]
+    ```
+  expected_output: >
+    Uma lista JSON com exatamente 5 sugestões de gráficos conforme o formato acima.
+
+recomendar_graficos:
+  description: >
+    Analise os dados do CSV abaixo e recomende os 5 melhores gráficos que podemos gerar a partir desses dados. 
+
+    Para cada gráfico, identifique:
+    - o tipo de gráfico mais apropriado (Barra ou Pizza)
+    - a coluna ideal para o eixo X (categorias)
+    - a métrica ideal para o eixo Y (valores numéricos)
+
+    Regras:
+    - Prefira colunas com até 30 categorias para gráficos de pizza.
+    - Evite colunas que contenham "id".
+    - Utilize colunas numéricas como métricas.
+    - O número máximo de gráficos é {quantidade}.
+    
+    Base de dados (formato CSV):
+    {csv_text}
+  expected_output: >
+    Um JSON válido com até {quantidade} objetos representando gráficos recomendados. Cada objeto deve conter as chaves:
+    - "tipo": "Barra" ou "Pizza"
+    - "x": nome da coluna a ser usada no eixo X
+    - "y": nome da coluna numérica a ser usada como métrica
+
+    Exemplo:
+    [
+      {"tipo": "Barra", "x": "categoria", "y": "valor_total"},
+      {"tipo": "Pizza", "x": "canal_origem", "y": "valor_total"}
+    ]
+
+sugerir_graficos_csv:
+  description: >
+    Com base no seguinte CSV:
+
+    {csv_text}
+
+    Analise as colunas e sugira os 8 melhores gráficos possíveis.
+    Para cada gráfico, informe:
+
+    - eixo_x: coluna categórica para o eixo X
+    - eixo_y: coluna numérica para o eixo Y
+    - tipo: "Linha", "Barra" ou "Pizza"
+
+    O resultado deve ser uma lista JSON com 8 objetos, como:
+    [
+      {"eixo_x": "categoria", "eixo_y": "valor_total", "tipo": "Linha"},
+      {"eixo_x": "produto", "eixo_y": "quantidade", "tipo": "Barra"},
+      ...
+    ]
+  expected_output: >
+    Lista JSON com 8 sugestões de gráficos mais importantes conforme o exemplo fornecido.
+
+avaliar_qualidade_dados:
+  description: >
+    Avalie a qualidade dos dados do seguinte CSV.
+    Identifique colunas com muitos valores ausentes, inconsistências ou tipos de dados inesperados.
+    Forneça sugestões para melhorar a qualidade dos dados.
+
+    CSV:
+    {dataframe}
+  expected_output: >
+    Relatório textual com no máximo 5 parágrafos contendo:
+    - Problemas encontrados na base
+    - Colunas com valores ausentes
+    - Sugestões de melhorias
+
+gerar_insights_negocio:
+  description: >
+    Gere um relatório com insights estratégicos a partir do seguinte CSV.
+    Analise padrões, tendências, oportunidades de negócio e possíveis anomalias.
+
+    Objetivo do usuário:
+    {objetivo}
+
+    CSV:
+    {dataframe}
+  expected_output: >
+    Texto com até 5 parágrafos contendo:
+    - Padrões detectados
+    - Possíveis anomalias
+    - Oportunidades de negócio
+    - Recomendações estratégicas
+
+descrever_grafico:
+  description: >
+    Você é um analista de dados experiente. Analise o gráfico com o título: "{titulo}".
+    O eixo X é: "{eixo_x}" e o eixo Y é: "{eixo_y}".
+
+    Aqui está uma amostra dos dados usados para gerar o gráfico:
+    {dados_amostra}
+
+    Gere uma descrição objetiva do que o gráfico mostra, focando em padrões, variações, picos e quedas.
+  expected_output: >
+    Uma frase curta com o principal insight que pode ser extraído do gráfico.
+
+responder_pergunta_csv:
+  description: >
+    Você é um assistente de dados que responde perguntas com base em um CSV.
+    Aqui está a base de dados em formato CSV:
+    {csv_text}
+
+    Responda à seguinte pergunta usando somente os dados acima:
+    {pergunta}
+  expected_output: >
+    Uma resposta objetiva, clara e baseada apenas no conteúdo do CSV.
